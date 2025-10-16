@@ -1,0 +1,41 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'beta-*'
+      - 'alpha-*'
+
+permissions:
+  contents: write
+
+jobs:
+  setup:
+    uses: ./.github/workflows/setup.yaml
+
+  build-android:
+    needs: setup
+    uses: ./.github/workflows/build-android.yaml
+    with:
+      version: ${{ needs.setup.outputs.version }}
+      flutter_version: ${{ needs.setup.outputs.flutter_version }}
+    secrets:
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+
+  release:
+    needs: [setup, build-android]
+    uses: ./.github/workflows/release.yaml
+    with:
+      tag: ${{ needs.setup.outputs.tag }}
+      version: ${{ needs.setup.outputs.version }}
+      is_alpha: ${{ needs.setup.outputs.is_alpha }}
+      is_beta: ${{ needs.setup.outputs.is_beta }}
+      release_notes: ${{ needs.setup.outputs.release_notes }}
+    secrets:
+      NOTIFICATION_URL: ${{ secrets.NOTIFICATION_URL }}
+      TELEGRAM_TO: ${{ secrets.TELEGRAM_TO }}
+      TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
